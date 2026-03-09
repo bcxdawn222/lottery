@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>聚利源 - 元宵喜乐会</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{width:100%;height:100%;overflow:hidden}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+      background:#000;
+      touch-action:manipulation;
+      display:flex;justify-content:center;align-items:center;
+    }
+
+    /* ===== 手机容器（固定9:16竖屏比例） ===== */
+    .phone-frame{
+      position:relative;
+      width:100vw;height:100vh;height:100dvh;
+      max-width:500px;
+      overflow:hidden;
+    }
+    @media (min-aspect-ratio:9/16){
+      .phone-frame{
+        height:100vh;height:100dvh;
+        width:calc((100vh)*9/16);width:calc((100dvh)*9/16);
+      }
+    }
+
+    /* ===== 海报背景（和原图一模一样） ===== */
+    .poster-bg{
+      position:absolute;inset:0;z-index:0;
+    }
+    .poster-bg img{
+      width:100%;height:100%;
+      object-fit:cover;object-position:center top;
+    }
+
+    /* ===== 金蛋热区层 ===== */
+    .hotspot-layer{
+      position:absolute;inset:0;z-index:2;
+    }
+    /* 三个金蛋的透明可点击热区 - 用百分比定位覆盖在海报金蛋上 */
+    .egg-hotspot{
+      position:absolute;cursor:pointer;border-radius:50%;
+      transition:transform .2s;
+      /* 调试时取消注释查看热区位置 */
+      /* background:rgba(255,0,0,.2); */
+    }
+    .egg-hotspot:active{transform:scale(.92)}
+    /* 左蛋 */
+    .egg-hotspot.left{
+      width:18%;height:12%;
+      left:14%;top:48%;
+    }
+    /* 中蛋（大） */
+    .egg-hotspot.center{
+      width:24%;height:16%;
+      left:38%;top:42%;
+    }
+    /* 右蛋 */
+    .egg-hotspot.right{
+      width:16%;height:11%;
+      left:66%;top:49%;
+    }
+
+    /* 点击提示浮层 */
+    .tap-hint{
+      position:absolute;z-index:3;
+      bottom:28%;left:50%;transform:translateX(-50%);
+      color:rgba(255,255,255,.85);font-size:15px;font-weight:600;
+      text-shadow:0 2px 8px rgba(0,0,0,.5);
+      animation:hintPulse 2.5s ease-in-out infinite;
+      pointer-events:none;white-space:nowrap;
+    }
+    @keyframes hintPulse{0%,100%{opacity:.3;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.04)}}
+
+    /* ===== 弹窗通用 ===== */
+    .overlay{
+      display:none;position:fixed;inset:0;z-index:100;
+      justify-content:center;align-items:center;
+      background:rgba(0,0,0,.65);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    }
+    .overlay.show{display:flex}
+    .dialog{
+      background:linear-gradient(180deg,#FFFCF0,#FFF);
+      border-radius:18px;padding:28px 22px;width:88%;max-width:370px;
+      text-align:center;position:relative;
+      box-shadow:0 20px 60px rgba(0,0,0,.55);
+      animation:popIn .35s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+    .dialog-close{
+      position:absolute;top:12px;right:12px;width:28px;height:28px;
+      border:none;background:rgba(0,0,0,.08);border-radius:50%;
+      font-size:16px;color:#999;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    }
+    .dialog h2{font-size:22px;color:#CC0000;margin-bottom:18px}
+    .field{margin-bottom:14px;text-align:left}
+    .field label{display:block;font-size:13px;color:#888;margin-bottom:4px;font-weight:500}
+    .field input{
+      width:100%;padding:11px 14px;border:1.5px solid #e8e8e8;border-radius:10px;
+      font-size:15px;outline:none;transition:border-color .2s;
+    }
+    .field input:focus{border-color:#FF4400}
+    .btn-go{
+      width:100%;padding:13px;margin-top:8px;border:none;border-radius:12px;
+      background:linear-gradient(135deg,#FF2200,#FF5500);color:#fff;
+      font-size:17px;font-weight:700;cursor:pointer;
+      box-shadow:0 4px 15px rgba(255,34,0,.4);
+      transition:transform .15s;
+    }
+    .btn-go:active{transform:scale(.97)}
+
+    /* ===== 砸蛋全屏 ===== */
+    .crack-screen{
+      display:none;position:fixed;inset:0;z-index:200;
+      flex-direction:column;align-items:center;justify-content:center;
+      background:radial-gradient(ellipse at center 40%,#2a0800 0%,#0a0000 100%);
+    }
+    .crack-screen.show{display:flex}
+    #crackCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+    .crack-content{position:relative;z-index:1;text-align:center}
+    .crack-egg-wrap{
+      position:relative;width:200px;height:255px;margin:0 auto;cursor:pointer;
+    }
+    .crack-egg-wrap svg{
+      width:100%;height:100%;
+      filter:drop-shadow(0 15px 40px rgba(255,215,0,.45));
+      transition:filter .3s;
+    }
+    .crack-egg-wrap:hover svg{filter:drop-shadow(0 15px 50px rgba(255,215,0,.65))}
+
+    .hammer-wrap{
+      position:absolute;top:-35px;right:-40px;width:90px;height:90px;
+      z-index:5;pointer-events:none;transform-origin:75% 85%;
+    }
+    .hammer-idle{animation:hammerFloat 1.2s ease-in-out infinite}
+    @keyframes hammerFloat{0%,100%{transform:rotate(0)}50%{transform:rotate(-25deg)}}
+    .hammer-hit{animation:hammerSmash .35s ease-in-out}
+    @keyframes hammerSmash{0%{transform:rotate(-50deg)}40%{transform:rotate(15deg)}100%{transform:rotate(0)}}
+
+    .crack-lines{position:absolute;inset:0;pointer-events:none;z-index:3}
+    .crack-lines svg{width:100%;height:100%}
+    .crack-line{
+      stroke:#8B6914;stroke-width:2.5;fill:none;
+      stroke-dasharray:200;stroke-dashoffset:200;
+      filter:drop-shadow(0 0 3px rgba(139,105,20,.6));
+    }
+    .crack-line.show{animation:drawCrack .4s ease-out forwards}
+    @keyframes drawCrack{to{stroke-dashoffset:0}}
+    .crack-hint-text{
+      color:#FFD700;font-size:18px;font-weight:700;margin-top:25px;
+      text-shadow:0 2px 10px rgba(255,215,0,.4);
+      animation:hintPulse 2s ease-in-out infinite;
+    }
+    .crack-count{color:rgba(255,255,255,.5);font-size:13px;margin-top:8px}
+    .egg-shake{animation:eggShake .4s ease-in-out}
+    @keyframes eggShake{
+      0%,100%{transform:translateX(0) rotate(0)}
+      15%{transform:translateX(-8px) rotate(-4deg)}
+      30%{transform:translateX(8px) rotate(4deg)}
+      45%{transform:translateX(-6px) rotate(-3deg)}
+      60%{transform:translateX(6px) rotate(3deg)}
+      75%{transform:translateX(-3px) rotate(-1deg)}
+    }
+    .egg-boom{animation:eggBoom .6s ease-out forwards}
+    @keyframes eggBoom{
+      0%{transform:scale(1);opacity:1}
+      30%{transform:scale(1.15);opacity:.9}
+      100%{transform:scale(0);opacity:0}
+    }
+
+    /* ===== 结果弹窗 ===== */
+    .result-dialog{background:linear-gradient(180deg,#FFF5F0,#FFF);overflow:visible}
+    .result-badge{
+      width:90px;height:90px;margin:-60px auto 10px;
+      border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-size:48px;
+      background:linear-gradient(135deg,#FFF5E0,#FFE0B2);
+      box-shadow:0 8px 25px rgba(255,152,0,.35);
+      animation:badgePop .5s cubic-bezier(.34,1.56,.64,1) .1s both;
+    }
+    @keyframes badgePop{from{transform:scale(0) rotate(-20deg)}to{transform:scale(1) rotate(0)}}
+    .result-title{font-size:28px;font-weight:900;margin:8px 0;animation:fadeUp .4s ease-out .2s both}
+    .result-desc{font-size:16px;color:#666;margin-bottom:20px;animation:fadeUp .4s ease-out .35s both}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    .btn-ok{
+      display:inline-block;padding:11px 45px;border:none;border-radius:25px;
+      background:linear-gradient(135deg,#FF2200,#FF5500);color:#fff;
+      font-size:15px;font-weight:700;cursor:pointer;
+      box-shadow:0 4px 12px rgba(255,34,0,.35);
+      animation:fadeUp .4s ease-out .5s both;
+    }
+    .btn-ok:active{transform:scale(.95)}
+    #confettiCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:99;pointer-events:none}
+  </style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <!-- 海报原图背景 -->
+  <div class="poster-bg">
+    <img src="/poster.jpg" alt="聚利源 元宵喜乐会" id="posterImg">
+  </div>
+
+  <!-- 金蛋透明热区 -->
+  <div class="hotspot-layer">
+    <div class="egg-hotspot left" onclick="onEggTap()"></div>
+    <div class="egg-hotspot center" onclick="onEggTap()"></div>
+    <div class="egg-hotspot right" onclick="onEggTap()"></div>
+  </div>
+
+  <div class="tap-hint">👆 点击金蛋 开始抽奖</div>
+</div>
+
+<canvas id="confettiCanvas"></canvas>
+
+<!-- 信息弹窗 -->
+<div class="overlay" id="infoModal">
+  <div class="dialog">
+    <button class="dialog-close" onclick="hideEl('infoModal')">✕</button>
+    <h2>参与抽奖</h2>
+    <div class="field"><label>您的姓名</label><input id="userName" placeholder="请输入姓名" maxlength="20"></div>
+    <div class="field"><label>手机号码</label><input id="userPhone" type="tel" placeholder="请输入手机号" maxlength="11"></div>
+    <button class="btn-go" onclick="submitInfo()">开始砸金蛋</button>
+  </div>
+</div>
+
+<!-- 砸蛋全屏 -->
+<div class="crack-screen" id="crackScreen">
+  <canvas id="crackCanvas"></canvas>
+  <div class="crack-content">
+    <div class="crack-egg-wrap" id="crackEgg" onclick="hitEgg()">
+      <div class="hammer-wrap hammer-idle" id="hammer">
+        <svg viewBox="0 0 100 100" width="100%" height="100%">
+          <rect x="45" y="40" width="8" height="52" rx="3" fill="#8B4513" transform="rotate(-15,49,66)"/>
+          <rect x="25" y="18" width="50" height="28" rx="5" fill="#888" stroke="#666" stroke-width="1.5" transform="rotate(-15,50,32)"/>
+          <rect x="25" y="18" width="50" height="14" rx="5" fill="#999" transform="rotate(-15,50,25)"/>
+        </svg>
+      </div>
+      <svg viewBox="0 0 120 155" id="crackEggSvg">
+        <defs>
+          <radialGradient id="gB" cx="38%" cy="32%" r="62%"><stop offset="0%" stop-color="#FFFCE8"/><stop offset="25%" stop-color="#FFE066"/><stop offset="55%" stop-color="#DAA520"/><stop offset="85%" stop-color="#B8860B"/><stop offset="100%" stop-color="#8B6914"/></radialGradient>
+          <radialGradient id="hB" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(255,255,255,.45)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/></radialGradient>
+        </defs>
+        <ellipse cx="60" cy="82" rx="50" ry="66" fill="url(#gB)"/>
+        <ellipse cx="60" cy="82" rx="50" ry="66" fill="url(#hB)" opacity=".3"/>
+        <ellipse cx="42" cy="52" rx="16" ry="26" fill="rgba(255,255,255,.35)" transform="rotate(-18,42,52)"/>
+      </svg>
+      <div class="crack-lines">
+        <svg viewBox="0 0 120 155">
+          <path class="crack-line" id="crack1" d="M60,35 L55,50 L65,60 L52,72 L58,82"/>
+          <path class="crack-line" id="crack2" d="M70,40 L75,55 L65,65 L78,78 L68,88"/>
+          <path class="crack-line" id="crack3" d="M50,55 L40,68 L50,80 L38,92 L48,100"/>
+          <path class="crack-line" id="crack4" d="M60,82 L72,95 L60,105 L70,115"/>
+        </svg>
+      </div>
+    </div>
+    <div class="crack-hint-text" id="crackHint">点击砸开金蛋！</div>
+    <div class="crack-count" id="crackCount"></div>
+  </div>
+</div>
+
+<!-- 结果弹窗 -->
+<div class="overlay" id="resultModal">
+  <div class="dialog result-dialog">
+    <div class="result-badge" id="resultBadge">🏆</div>
+    <div class="result-title" id="resultTitle" style="color:#CC0000">恭喜中奖！</div>
+    <div class="result-desc" id="resultDesc">一等奖：现金大奖</div>
+    <button class="btn-ok" onclick="hideEl('resultModal');stopConfetti()">我知道了</button>
+  </div>
+</div>
+
+<script>
+// ===================== 彩带动画 =====================
+let confettiPieces=[],confettiRunning=false;
+const cc=document.getElementById('confettiCanvas'),cctx=cc.getContext('2d');
+function resizeCC(){cc.width=window.innerWidth;cc.height=window.innerHeight}
+window.addEventListener('resize',resizeCC);resizeCC();
+
+function startConfetti(){
+  confettiPieces=[];confettiRunning=true;
+  const colors=['#FF0000','#FFD700','#FF4500','#00FF00','#FF69B4','#4169E1','#FFA500','#FFFF00'];
+  for(let i=0;i<120;i++){
+    confettiPieces.push({
+      x:Math.random()*cc.width,y:Math.random()*cc.height-cc.height,
+      w:Math.random()*8+4,h:Math.random()*5+3,
+      dx:(Math.random()-.5)*4,dy:Math.random()*3+2,
+      rot:Math.random()*360,drot:(Math.random()-.5)*12,
+      color:colors[Math.floor(Math.random()*colors.length)],a:1
+    });
+  }
+  drawConfetti();
+}
+function drawConfetti(){
+  if(!confettiRunning)return;
+  cctx.clearRect(0,0,cc.width,cc.height);let alive=0;
+  confettiPieces.forEach(p=>{
+    if(p.a<=0)return;alive++;
+    cctx.save();cctx.translate(p.x,p.y);cctx.rotate(p.rot*Math.PI/180);
+    cctx.globalAlpha=p.a;cctx.fillStyle=p.color;
+    cctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);cctx.restore();
+    p.x+=p.dx;p.y+=p.dy;p.rot+=p.drot;p.dy+=.05;
+    if(p.y>cc.height+20)p.a-=.02;
+  });
+  if(alive>0)requestAnimationFrame(drawConfetti);
+  else{confettiRunning=false;cctx.clearRect(0,0,cc.width,cc.height)}
+}
+function stopConfetti(){confettiRunning=false;cctx.clearRect(0,0,cc.width,cc.height)}
+
+// ===================== 砸蛋粒子 =====================
+const crkC=document.getElementById('crackCanvas'),crkCtx=crkC.getContext('2d');
+let crkParticles=[],crkRunning=false;
+function resizeCrk(){crkC.width=window.innerWidth;crkC.height=window.innerHeight}
+window.addEventListener('resize',resizeCrk);resizeCrk();
+
+function spawnCrkParticles(cx,cy,count,boom){
+  const colors=['#FFD700','#FFA500','#FFE066','#FFEC80','#DAA520','#FF6600'];
+  for(let i=0;i<count;i++){
+    const angle=Math.random()*Math.PI*2;
+    const speed=boom?(Math.random()*8+3):(Math.random()*4+1);
+    crkParticles.push({
+      x:cx,y:cy,dx:Math.cos(angle)*speed,dy:Math.sin(angle)*speed-(boom?3:1),
+      r:Math.random()*(boom?5:3)+1.5,life:1,decay:Math.random()*.02+.01,
+      color:colors[Math.floor(Math.random()*colors.length)]
+    });
+  }
+  if(!crkRunning){crkRunning=true;drawCrkParticles()}
+}
+function drawCrkParticles(){
+  crkCtx.clearRect(0,0,crkC.width,crkC.height);
+  crkParticles=crkParticles.filter(p=>p.life>0);
+  crkParticles.forEach(p=>{
+    crkCtx.beginPath();crkCtx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);
+    crkCtx.fillStyle=p.color;crkCtx.globalAlpha=p.life;crkCtx.fill();crkCtx.globalAlpha=1;
+    p.x+=p.dx;p.y+=p.dy;p.dy+=.15;p.life-=p.decay;
+  });
+  if(crkParticles.length>0)requestAnimationFrame(drawCrkParticles);
+  else{crkRunning=false;crkCtx.clearRect(0,0,crkC.width,crkC.height)}
+}
+
+// ===================== 逻辑 =====================
+let config={},currentUser={},crackCount=0,isAnimating=false;
+
+window.addEventListener('DOMContentLoaded',async()=>{
+  try{
+    const r=await fetch('/api/config');const d=await r.json();
+    if(d.success)config=d.data;
+  }catch(e){}
+});
+
+function showEl(id){document.getElementById(id).classList.add('show')}
+function hideEl(id){document.getElementById(id).classList.remove('show')}
+
+function onEggTap(){showEl('infoModal')}
+
+function submitInfo(){
+  const n=document.getElementById('userName').value.trim();
+  const p=document.getElementById('userPhone').value.trim();
+  if(!n){alert('请输入您的姓名');return}
+  if(!p||!/^1\d{10}$/.test(p)){alert('请输入正确的手机号');return}
+  currentUser={userName:n,userPhone:p};
+  hideEl('infoModal');
+  crackCount=0;isAnimating=false;
+  document.querySelectorAll('.crack-line').forEach(l=>l.classList.remove('show'));
+  const egg=document.getElementById('crackEgg');
+  egg.classList.remove('egg-boom','egg-shake');egg.style.opacity=1;egg.style.transform='';
+  document.getElementById('crackHint').textContent='点击砸开金蛋！';
+  document.getElementById('crackCount').textContent='';
+  document.getElementById('hammer').className='hammer-wrap hammer-idle';
+  showEl('crackScreen');
+}
+
+function hitEgg(){
+  if(isAnimating)return;
+  crackCount++;isAnimating=true;
+  const egg=document.getElementById('crackEgg');
+  const hm=document.getElementById('hammer');
+  const rect=egg.getBoundingClientRect();
+  const cx=rect.left+rect.width/2,cy=rect.top+rect.height*.4;
+  hm.classList.remove('hammer-idle');hm.classList.add('hammer-hit');
+
+  if(crackCount<=3){
+    const cl=document.getElementById('crack'+crackCount);
+    if(cl)setTimeout(()=>cl.classList.add('show'),150);
+    setTimeout(()=>{egg.classList.add('egg-shake')},150);
+    setTimeout(()=>{egg.classList.remove('egg-shake');isAnimating=false},600);
+    setTimeout(()=>spawnCrkParticles(cx,cy,15,false),180);
+    document.getElementById('crackHint').textContent=crackCount>=3?'再来一击！':'继续砸！';
+    document.getElementById('crackCount').textContent=`已砸 ${crackCount} 次`;
+    setTimeout(()=>{hm.classList.remove('hammer-hit');hm.classList.add('hammer-idle')},400);
+  }
+  if(crackCount>3){
+    const cl4=document.getElementById('crack4');if(cl4)cl4.classList.add('show');
+    setTimeout(()=>{
+      egg.classList.add('egg-boom');
+      spawnCrkParticles(cx,cy,60,true);
+      document.getElementById('crackHint').textContent='';
+      document.getElementById('crackCount').textContent='';
+    },200);
+    setTimeout(()=>{hideEl('crackScreen');doLottery()},1000);
+  }
+}
+
+async function doLottery(){
+  try{
+    const r=await fetch('/api/lottery',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(currentUser)
+    });
+    const d=await r.json();
+    if(d.success){showResult(d.data.prize)}
+    else{
+      if(d.data&&d.data.prize)showResult(d.data.prize,true);
+      else alert(d.message||'抽奖失败');
+    }
+  }catch(e){alert('网络错误，请重试')}
+}
+
+function showResult(prize,isRepeat=false){
+  const icons={1:'🏆',2:'🥇',3:'🥈',4:'🎁',5:'🎀',0:'😊'};
+  document.getElementById('resultBadge').textContent=icons[prize.id]||'🎊';
+  const titleEl=document.getElementById('resultTitle');
+  if(isRepeat){titleEl.textContent='您已抽过奖';titleEl.style.color='#999'}
+  else if(prize.id===0){titleEl.textContent=prize.name;titleEl.style.color='#999'}
+  else{titleEl.textContent=prize.name;titleEl.style.color=prize.color||'#CC0000'}
+  document.getElementById('resultDesc').textContent=prize.description;
+  if(prize.id!==0&&!isRepeat)startConfetti();
+  showEl('resultModal');
+}
+</script>
+</body>
+</html>
