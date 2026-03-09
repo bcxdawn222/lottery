@@ -375,33 +375,38 @@ function submitInfo(){
 
 function hitEgg(){
   if(isAnimating)return;
-  crackCount++;isAnimating=true;
+  isAnimating=true;
   const egg=document.getElementById('crackEgg');
   const hm=document.getElementById('hammer');
   const rect=egg.getBoundingClientRect();
   const cx=rect.left+rect.width/2,cy=rect.top+rect.height*.4;
   hm.classList.remove('hammer-idle');hm.classList.add('hammer-hit');
 
-  if(crackCount<=3){
-    const cl=document.getElementById('crack'+crackCount);
-    if(cl)setTimeout(()=>cl.classList.add('show'),150);
-    setTimeout(()=>{egg.classList.add('egg-shake')},150);
-    setTimeout(()=>{egg.classList.remove('egg-shake');isAnimating=false},600);
-    setTimeout(()=>spawnCrkParticles(cx,cy,15,false),180);
-    document.getElementById('crackHint').textContent=crackCount>=3?'再来一击！':'继续砸！';
-    document.getElementById('crackCount').textContent=`已砸 ${crackCount} 次`;
-    setTimeout(()=>{hm.classList.remove('hammer-hit');hm.classList.add('hammer-idle')},400);
-  }
-  if(crackCount>3){
-    const cl4=document.getElementById('crack4');if(cl4)cl4.classList.add('show');
-    setTimeout(()=>{
-      egg.classList.add('egg-boom');
-      spawnCrkParticles(cx,cy,60,true);
-      document.getElementById('crackHint').textContent='';
-      document.getElementById('crackCount').textContent='';
-    },200);
-    setTimeout(()=>{hideEl('crackScreen');doLottery()},1000);
-  }
+  // 一次砸开：快速显示所有裂纹
+  setTimeout(()=>{
+    document.getElementById('crack1').classList.add('show');
+    document.getElementById('crack2').classList.add('show');
+  },100);
+  setTimeout(()=>{
+    document.getElementById('crack3').classList.add('show');
+    document.getElementById('crack4').classList.add('show');
+  },250);
+
+  // 震动
+  setTimeout(()=>{egg.classList.add('egg-shake')},100);
+  setTimeout(()=>spawnCrkParticles(cx,cy,25,false),150);
+
+  // 蛋碎 + 爆炸粒子
+  setTimeout(()=>{
+    egg.classList.remove('egg-shake');
+    egg.classList.add('egg-boom');
+    spawnCrkParticles(cx,cy,60,true);
+    document.getElementById('crackHint').textContent='';
+    document.getElementById('crackCount').textContent='';
+  },500);
+
+  // 跳转抽奖结果
+  setTimeout(()=>{hideEl('crackScreen');doLottery()},1200);
 }
 
 async function doLottery(){
