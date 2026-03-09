@@ -25,12 +25,10 @@ if (!fs.existsSync(DATA_DIR)) {
 
 // 默认奖项配置
 const DEFAULT_PRIZES = [
-  { id: 1, name: '一等奖', description: '现金大奖 888元', probability: 2, color: '#FF0000', remaining: 1, total: 1 },
-  { id: 2, name: '二等奖', description: '现金红包 388元', probability: 5, color: '#FF4500', remaining: 3, total: 3 },
-  { id: 3, name: '三等奖', description: '现金红包 188元', probability: 10, color: '#FF8C00', remaining: 5, total: 5 },
-  { id: 4, name: '四等奖', description: '精美礼品一份', probability: 20, color: '#FFD700', remaining: 20, total: 20 },
-  { id: 5, name: '五等奖', description: '优惠券 50元', probability: 30, color: '#FFA500', remaining: 50, total: 50 },
-  { id: 0, name: '谢谢参与', description: '感谢您的参与', probability: 33, color: '#999999', remaining: -1, total: -1 }
+  { id: 1, name: '一等奖', description: '现金大奖 888元', probability: 5, color: '#FF0000', remaining: 1, total: 1 },
+  { id: 2, name: '二等奖', description: '现金红包 388元', probability: 10, color: '#FF4500', remaining: 3, total: 3 },
+  { id: 3, name: '三等奖', description: '现金红包 188元', probability: 15, color: '#FF8C00', remaining: 5, total: 5 },
+  { id: 0, name: '谢谢参与', description: '感谢您的参与', probability: 70, color: '#999999', remaining: -1, total: -1 }
 ];
 
 // 默认系统配置
@@ -264,6 +262,39 @@ app.put('/api/admin/config', (req, res) => {
   config = { ...config, ...req.body };
   writeJSON(CONFIG_FILE, config);
   res.json({ success: true, message: '配置更新成功' });
+});
+
+// 添加奖项
+app.post('/api/admin/prizes', (req, res) => {
+  const { name, description, probability, color, total } = req.body;
+  if (!name) return res.json({ success: false, message: '奖项名称不能为空' });
+  const maxId = prizes.filter(p => p.id !== 0).reduce((max, p) => Math.max(max, p.id), 0);
+  const newPrize = {
+    id: maxId + 1,
+    name: name || '新奖项',
+    description: description || '奖品描述',
+    probability: parseFloat(probability) || 10,
+    color: color || '#FF8C00',
+    remaining: parseInt(total) || 5,
+    total: parseInt(total) || 5
+  };
+  // 插入到"谢谢参与"之前
+  const idx = prizes.findIndex(p => p.id === 0);
+  if (idx !== -1) prizes.splice(idx, 0, newPrize);
+  else prizes.push(newPrize);
+  writeJSON(PRIZES_FILE, prizes);
+  res.json({ success: true, message: '奖项添加成功', data: newPrize });
+});
+
+// 删除奖项
+app.delete('/api/admin/prizes/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  if (id === 0) return res.json({ success: false, message: '"谢谢参与"不能删除' });
+  const idx = prizes.findIndex(p => p.id === id);
+  if (idx === -1) return res.json({ success: false, message: '奖项不存在' });
+  prizes.splice(idx, 1);
+  writeJSON(PRIZES_FILE, prizes);
+  res.json({ success: true, message: '奖项已删除' });
 });
 
 // 导出中奖记录为 CSV

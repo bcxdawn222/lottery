@@ -651,7 +651,10 @@
         <div class="card">
           <h3 style="display:flex; justify-content:space-between; align-items:center;">
             奖项配置
-            <button class="btn btn-primary" onclick="savePrizes()">💾 保存设置</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-success" onclick="showAddPrize()">➕ 添加奖项</button>
+              <button class="btn btn-primary" onclick="savePrizes()">💾 保存设置</button>
+            </div>
           </h3>
           <div id="prizesEditor"></div>
         </div>
@@ -910,9 +913,12 @@
       const container = document.getElementById('prizesEditor');
       container.innerHTML = allPrizes.map((p, i) => `
         <div class="prize-edit-card">
-          <div class="prize-edit-header">
-            <span class="prize-color-dot" style="background:${p.color}"></span>
-            <span class="prize-edit-title">${p.id === 0 ? '未中奖' : p.name}</span>
+          <div class="prize-edit-header" style="justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="prize-color-dot" style="background:${p.color}"></span>
+              <span class="prize-edit-title">${p.id === 0 ? '未中奖' : p.name}</span>
+            </div>
+            ${p.id !== 0 ? `<button class="btn btn-danger" style="padding:4px 12px;font-size:12px" onclick="deletePrize(${p.id},'${p.name}')">🗑️ 删除</button>` : ''}
           </div>
           <div class="prize-edit-grid">
             <div class="form-item">
@@ -966,6 +972,37 @@
         showToast(data.message, data.success ? 'success' : 'error');
         loadStats();
       });
+    }
+
+    // ========== 添加奖项 ==========
+    function showAddPrize() {
+      const name = prompt('奖项名称（如：四等奖）');
+      if (!name) return;
+      const desc = prompt('奖品描述（如：精美礼品一份）') || '奖品描述';
+      const total = parseInt(prompt('奖品数量') || '5');
+      const prob = parseFloat(prompt('中奖概率权重（数字越大概率越高）') || '10');
+
+      fetch('/api/admin/prizes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: desc, probability: prob, total, color: '#FF8C00' })
+      })
+      .then(r => r.json())
+      .then(data => {
+        showToast(data.message, data.success ? 'success' : 'error');
+        if (data.success) { loadPrizes(); loadStats(); }
+      });
+    }
+
+    // ========== 删除奖项 ==========
+    function deletePrize(id, name) {
+      if (!confirm(`确定要删除「${name}」吗？`)) return;
+      fetch(`/api/admin/prizes/${id}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+          showToast(data.message, data.success ? 'success' : 'error');
+          if (data.success) { loadPrizes(); loadStats(); }
+        });
     }
 
     // ========== 统计 ==========
